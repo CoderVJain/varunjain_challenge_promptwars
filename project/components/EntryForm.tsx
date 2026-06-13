@@ -23,11 +23,16 @@ export function EntryForm({ onSaved }: { onSaved: (a: Analysis) => void }) {
   const [error, setError] = useState("");
 
   async function submit() {
-    if (!text.trim()) return setError("Write a few words about your day.");
+    const trimmed = text.trim();
+    if (!trimmed) return setError("Write a few words about your day.");
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length < 2) {
+      return setError("Please write a bit more (at least 2 words) about your day so we can analyze it.");
+    }
     setLoading(true);
     setError("");
     setResult(null);
-    setCrisisHint(check(text));
+    setCrisisHint(check(trimmed));
 
     const {
       data: { session },

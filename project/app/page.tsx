@@ -15,6 +15,14 @@ export default function Onboarding() {
 
   async function start() {
     if (!exam) return setError("Please pick the exam you're preparing for.");
+    if (examDate) {
+      const selectedDate = new Date(examDate + "T00:00:00");
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      if (selectedDate < todayDate) {
+        return setError("Exam date must be today or in the future.");
+      }
+    }
     setSaving(true);
     setError("");
     const session = await ensureSession();
@@ -33,6 +41,12 @@ export default function Onboarding() {
     }
     router.push("/dashboard");
   }
+
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const minDate = `${yyyy}-${mm}-${dd}`;
 
   return (
     <main className="flex flex-1 items-center justify-center p-6">
@@ -77,6 +91,7 @@ export default function Onboarding() {
             id="exam-date"
             type="date"
             value={examDate}
+            min={minDate}
             onChange={(e) => setExamDate(e.target.value)}
             className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-navy focus:border-blue focus:outline-none"
           />
