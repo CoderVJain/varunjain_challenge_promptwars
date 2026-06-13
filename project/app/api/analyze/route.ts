@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { analyzeBodySchema } from "@/lib/api-schemas";
 import { analyzeJournal } from "@/lib/gemini";
 import { supabaseForToken } from "@/lib/supabase/server";
 
@@ -8,10 +9,9 @@ export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { mood, text } = await req.json();
-  if (typeof mood !== "number" || mood < 1 || mood > 5 || !text?.trim()) {
-    return NextResponse.json({ error: "invalid input" }, { status: 400 });
-  }
+  const parsed = analyzeBodySchema.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ error: "invalid input" }, { status: 400 });
+  const { mood, text } = parsed.data;
 
   const sb = supabaseForToken(token);
   const { data: userData } = await sb.auth.getUser();

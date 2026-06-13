@@ -1,9 +1,21 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { ApiError, GoogleGenAI, Type } from "@google/genai";
 import { normalizeTriggers, type Trigger } from "./triggers";
 
 /** Centralized model ids — swap here if rate limits bite (see plan). */
-export const ANALYZE_MODEL = "gemini-2.5-flash-lite";
-export const CHAT_MODEL = "gemini-2.5-flash";
+export const FLASH_MODEL = "gemini-2.5-flash";
+export const FLASH_LITE_MODEL = "gemini-2.5-flash-lite";
+export const ANALYZE_MODEL = FLASH_LITE_MODEL;
+export const CHAT_MODEL = FLASH_MODEL;
+
+function fallbackModel(model: string): string | null {
+  if (model === FLASH_MODEL) return FLASH_LITE_MODEL;
+  if (model === FLASH_LITE_MODEL) return FLASH_MODEL;
+  return null;
+}
+
+function isRateLimited(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 429;
+}
 
 export type { Trigger };
 
@@ -66,25 +78,37 @@ export async function streamCompanion(systemInstruction: string, history: ChatTu
     })),
     { role: "user", parts: [{ text: message }] },
   ];
-  return client().models.generateContentStream({
-    model: CHAT_MODEL,
-    contents,
-    config: { systemInstruction, temperature: 0.8 },
-  });
+  const config = { systemInstruction, temperature: 0.8 };
+  try {
+    return await client().models.generateContentStream({ model: CHAT_MODEL, contents, config });
+  } catch (err) {
+    const fb = fallbackModel(CHAT_MODEL);
+    if (isRateLimited(err) && fb) {
+      return client().models.generateContentStream({ model: fb, contents, config });
+    }
+    throw err;
+  }
 }
 
 /** Single structured call: mood + triggers + coping + crisis flag together. */
 export async function analyzeJournal(text: string): Promise<Analysis> {
-  const res = await client().models.generateContent({
-    model: ANALYZE_MODEL,
-    contents: text,
-    config: {
-      systemInstruction: ANALYZE_SYSTEM,
-      responseMimeType: "application/json",
-      responseSchema: ANALYZE_SCHEMA,
-      temperature: 0.4,
-    },
-  });
+  const config = {
+    systemInstruction: ANALYZE_SYSTEM,
+    responseMimeType: "application/json" as const,
+    responseSchema: ANALYZE_SCHEMA,
+    temperature: 0.4,
+  };
+  let res;
+  try {
+    res = await client().models.generateContent({ model: ANALYZE_MODEL, contents: text, config });
+  } catch (err) {
+    const fb = fallbackModel(ANALYZE_MODEL);
+    if (isRateLimited(err) && fb) {
+      res = await client().models.generateContent({ model: fb, contents: text, config });
+    } else {
+      throw err;
+    }
+  }
   const a = JSON.parse(res.text ?? "{}") as Analysis;
   a.triggers = normalizeTriggers(a.triggers);
   return a;

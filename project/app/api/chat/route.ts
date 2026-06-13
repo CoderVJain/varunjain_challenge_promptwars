@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { streamCompanion, type ChatTurn } from "@/lib/gemini";
+import { chatBodySchema } from "@/lib/api-schemas";
+import { streamCompanion } from "@/lib/gemini";
 import { supabaseForToken } from "@/lib/supabase/server";
 
 const MAX_MSG = 2000;
@@ -41,12 +42,13 @@ export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return new Response("unauthorized", { status: 401 });
 
-  const { message, history } = (await req.json()) as { message: string; history: ChatTurn[] };
-  if (!message?.trim()) return new Response("invalid input", { status: 400 });
+  const parsed = chatBodySchema.safeParse(await req.json());
+  if (!parsed.success) return new Response("invalid input", { status: 400 });
+  const { message, history } = parsed.data;
 
   const sb = supabaseForToken(token);
   const system = await buildSystem(sb);
-  const result = await streamCompanion(system, history ?? [], message.slice(0, MAX_MSG));
+  const result = await streamCompanion(system, history, message.slice(0, MAX_MSG));
 
   const stream = new ReadableStream({
     async start(controller) {
