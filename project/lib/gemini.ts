@@ -26,7 +26,8 @@ Surface HIDDEN stress triggers a basic mood tracker would miss — link feelings
 concrete causes (a subject, sleep, comparison with peers, time pressure, family
 expectations, health). Keep trigger labels short (1-3 words). Set crisis=true only
 for signs of self-harm, suicidal thoughts, or severe hopelessness. Write coping as
-one concrete, doable micro-step for right now.`;
+one concrete, doable micro-step for right now.
+CRITICAL: If the input text is extremely short, uninformative, or just a simple greeting/test (e.g. "hey", "hi", "hello", "test", "ok"), do not extract triggers (set triggers to []), and set coping to: "Please write a bit more about how your day went so I can suggest a relevant step."`;
 
 const ANALYZE_SCHEMA = {
   type: Type.OBJECT,
