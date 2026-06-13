@@ -6,8 +6,10 @@ import { createClient } from "@supabase/supabase-js";
  * the incoming request's Authorization header.
  */
 export function supabaseForToken(accessToken: string) {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const sanitizedUrl = rawUrl.replace(/\/rest\/v1\/?$/, "");
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    sanitizedUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
