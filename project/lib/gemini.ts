@@ -17,6 +17,8 @@ function isRateLimited(err: unknown): boolean {
   return err instanceof ApiError && err.status === 429;
 }
 
+export { fallbackModel, isRateLimited };
+
 export type { Trigger };
 
 export type Analysis = {
